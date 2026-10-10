@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>给生生的一封信</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #fce4ec, #f8bbd0, #f48fb1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: "STKaiti", "KaiTi", "PingFang SC", serif;
+            overflow: hidden;
+        }
+
+        /* 飘落花瓣 */
+        .petal {
+            position: fixed;
+            top: -20px;
+            font-size: 18px;
+            opacity: 0.7;
+            pointer-events: none;
+            z-index: 1;
+            animation: fall linear forwards;
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(110vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* 信封 */
+        .envelope {
+            position: relative;
+            width: 340px;
+            height: 220px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(200, 100, 130, 0.3);
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.6s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .envelope::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(135deg, #f8bbd0 50%, #f48fb1 50%);
+            clip-path: polygon(0 0, 50% 100%, 100% 0);
+            border-radius: 8px 8px 0 0;
+        }
+
+        .envelope .seal {
+            width: 50px;
+            height: 50px;
+            background: #e91e63;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            font-size: 22px;
+            z-index: 2;
+            box-shadow: 0 2px 10px rgba(233, 30, 99, 0.4);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50%      { transform: scale(1.1); }
+        }
+
+        .envelope .hint-text {
+            margin-top: 16px;
+            font-size: 14px;
+            color: #ad1457;
+            z-index: 2;
+        }
+
+        .envelope.open {
+            transform: scale(0) rotate(20deg);
+            opacity: 0;
+        }
+
+        /* 信纸 */
+        .letter {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            width: 90%;
+            max-width: 420px;
+            max-height: 80vh;
+            background: #fffdf5;
+            border-radius: 12px;
+            padding: 32px 28px;
+            box-shadow: 0 15px 50px rgba(200, 100, 130, 0.35);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 20;
+            overflow-y: auto;
+            transition: all 0.8s ease;
+        }
+
+        .letter.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+            pointer-events: auto;
+        }
+
+        .letter .date {
+            text-align: right;
+            font-size: 13px;
+            color: #999;
+            margin-bottom: 20px;
+        }
+
+        .letter .greeting {
+            font-size: 20px;
+            color: #c2185b;
+            margin-bottom: 16px;
+        }
+
+        .letter .content {
+            font-size: 16px;
+            line-height: 2;
+            color: #5d4037;
+        }
+
+        .letter .content .line {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.5s ease;
+        }
+
+        .letter .content .line.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .letter .signature {
+            text-align: right;
+            margin-top: 24px;
+            font-size: 16px;
+            color: #c2185b;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+        }
+
+        .letter .signature.visible {
+            opacity: 1;
+        }
+
+        /* 音乐按钮 */
+        .music-btn {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.85);
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .music-btn.playing {
+            animation: spin 3s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+<button class="music-btn" id="musicBtn">🎵</button>
+
+<!-- 背景音乐：请替换 src 为你自己的音乐链接 -->
+<audio id="bgMusic" loop preload="auto">
+    <source src="music.mp3" type="audio/mpeg">
+</audio>
+
+<div class="envelope" id="envelope">
+    <div class="seal">💌</div>
+    <div class="hint-text">点我拆开</div>
+</div>
+
+<div class="letter" id="letter">
+    <div class="date" id="date"></div>
+    <div class="greeting">生生：</div>
+    <div class="content" id="content"></div>
+    <div class="signature" id="signature"></div>
+</div>
+
+<script>
+    // 今天的日期
+    const today = new Date();
+    document.getElementById("date").textContent =
+        `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日`;
+
+    // 情书内容，每行一句
+    const lines = [
+        "有些话藏在心里很久了，今天想写给你看。",
+        "在我悲伤难过的时候，你出现了，",
+        "我一度认为自己不会再喜欢任何人了，",
+        "可是你的出现让我猝不及防。",
+        "在我意识到自己开始想你，依恋你的时候，",
+        "我知道我喜欢上你了。",
+        "我害怕，我想退缩，我不喜欢被人牵着情绪",
+        "可在喜欢上你的时候，",
+        "我就已经没法全身而退了。",
+        "但我庆幸自己很幸运，",
+        "我遇到的是生生，",
+        "生生是个天使。",
+        "",
+        "生生，我喜欢你。",
+        "不是随口说说的那种喜欢，",
+        "是想和你一起看日出日落、",
+        "一起走过春夏秋冬的那种喜欢。",
+        "",
+        "愿你每天都开心，",
+        "愿我能成为让你开心的那个人。"
+    ];
+
+    const signatureText = "—— 一个偷偷喜欢你的人";
+
+    // 飘落花瓣
+    function createPetal() {
+        const petal = document.createElement("div");
+        petal.className = "petal";
+        petal.textContent = ["🌸", "🩷", "✿"][Math.floor(Math.random() * 3)];
+        petal.style.left = Math.random() * 100 + "vw";
+        petal.style.fontSize = (Math.random() * 12 + 12) + "px";
+        petal.style.animationDuration = (Math.random() * 4 + 5) + "s";
+        document.body.appendChild(petal);
+        setTimeout(() => petal.remove(), 9000);
+    }
+    setInterval(createPetal, 600);
+
+    // 拆信
+    const envelope = document.getElementById("envelope");
+    const letter = document.getElementById("letter");
+    const contentEl = document.getElementById("content");
+    const signatureEl = document.getElementById("signature");
+    const bgMusic = document.getElementById("bgMusic");
+    const musicBtn = document.getElementById("musicBtn");
+    let opened = false;
+
+    envelope.addEventListener("click", () => {
+        if (opened) return;
+        opened = true;
+        envelope.classList.add("open");
+
+        // 尝试播放音乐
+        bgMusic.play().then(() => {
+            musicBtn.classList.add("playing");
+        }).catch(() => {});
+
+        setTimeout(() => {
+            letter.classList.add("show");
+            showLines();
+        }, 600);
+    });
+
+    // 逐行显示
+    function showLines() {
+        let i = 0;
+        function next() {
+            if (i >= lines.length) {
+                setTimeout(() => signatureEl.classList.add("visible"), 400);
+                return;
+            }
+            const div = document.createElement("div");
+            div.className = "line";
+            div.textContent = lines[i];
+            if (lines[i] === "") div.style.height = "12px";
+            contentEl.appendChild(div);
+            requestAnimationFrame(() => div.classList.add("visible"));
+            i++;
+            setTimeout(next, lines[i - 1] === "" ? 300 : 900);
+        }
+        next();
+    }
+
+    // 音乐按钮
+    musicBtn.addEventListener("click", () => {
+        if (bgMusic.paused) {
+            bgMusic.play();
+            musicBtn.classList.add("playing");
+        } else {
+            bgMusic.pause();
+            musicBtn.classList.remove("playing");
+        }
+    });
+</script>
+</body>
+</html>
